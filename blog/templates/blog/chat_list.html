@@ -1,0 +1,83 @@
+{% extends "blog/layout.html" %}
+{% load static %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'story' %}">
+            <img src="{% static 'blog/images/site-logo.png' %}" style="width: 80px; height: 80px;" alt="">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'write_post' %}">
+                    <i class="fas fa-edit" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i> Write
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{ sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' user.username %}">
+                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="profile-image rounded-circle" style="width: 25px; height: 25px;">
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="post-container">
+        <h2>Chat</h2>
+        {% if chat_data %}
+            <ul class="list-group">
+                {% for data in chat_data %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a style="color: black; text-decoration: none;" href="{% url 'chat_detail' data.chat.id %}" class="d-flex align-items-center">
+                            <img src="{{ data.other_user_avatar|default:'path/to/default-avatar.png' }}" 
+
+                                 alt="Profile Picture" 
+                                 class="profile-image me-2" 
+                                 style="width: 30px; height: 30px; border-radius: 50%;">
+                                 
+                            <strong>{{ data.other_user }}</strong>
+                        </a>
+                        
+                        <form action="{% url 'delete_chat' data.chat.id %}" method="POST" class="ms-3">
+                            {% csrf_token %}
+                            <span style="background-color: orangered;" class="badge badge-primary badge-pill ">{{ data.unread_count }}</span>
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You have no active chats.</p>
+        {% endif %}
+       
+    </div>
+{% endblock %}
+
+

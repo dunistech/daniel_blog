@@ -1,0 +1,19 @@
+<!-- {% extends "blog/layout.html" %}
+{% load static %}
+
+{% block content %}
+
+
+    {% for notification in notifications %}
+        <div>
+            <p>
+                <strong>{{ notification.sender.username }}</strong> {{ notification.content }}
+                <a href="{{ notification.url }}">View</a>
+            </p>
+            <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+        </div>
+    {% empty %}
+        <p>No notifications yet.</p>
+    {% endfor %}
+
+{% endblock %} -->

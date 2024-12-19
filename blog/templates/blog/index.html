@@ -1,0 +1,18 @@
+{% extends "blog/layout.html" %}
+
+{% load static %}
+{% block body_class %}landing-bg{% endblock %}
+
+
+{% block content %}
+
+            <div class="container ml-0 "  style="padding-top: 50px; margin-top: 10%; color:orangered;" >
+                <h1 class="" style="font-size: 7rem;line-height: 1">Dunis Coder <br> stories & ideas</h1>
+                <p class="lead  text-light "  >"Start where you are. Use what you have. Do what you can." — Arthur Ashe</p>
+                <a href="{% url 'story' %}" class="btn btn-success btn-lg">Start reading</a>
+            </div>
+       
+{% endblock %}
+
+
+

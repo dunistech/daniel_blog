@@ -1,0 +1,249 @@
+{% extends "blog/layout.html" %}
+{% load static %}
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'story' %}">
+            <img src="{% static 'blog/images/site-logo.png' %}" style="width: 80px; height: 80px;" alt="">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'write_post' %}">
+                    <i class="fas fa-edit" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i> Write
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{ sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' user.username %}">
+                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="profile-image rounded-circle" style="width: 25px; height: 25px;">
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm text-center " >
+                <div class="chat-header d-flex align-items-center justify-content-between mb-3" style="position: relative;">
+                    <!-- Back Arrow -->
+                    <a href="{% url 'chat_list' %}" class="text-decoration-none text-dark" style="font-size: 24px; position: absolute; left: 0; padding: 5px;">
+                        <i class="fas fa-arrow-left" style="color:rgb(172, 163, 163) ;"></i>
+                    </a>
+                
+                    <!-- Centered Avatar and Username -->
+                    <div class="text-center mx-auto">
+                        {% if receiver.avatar %}
+                            <a href="{% url 'profile' receiver.username %}">
+                                <img src="{{ receiver.avatar.url }}" alt="{{ receiver.username }}" 
+                                     class="rounded-circle" style="width: 50px; height: 50px;">
+                            </a>
+                        {% else %}
+                            <img src="{% static 'blog/images/placeholder.png' %}" alt="{{ receiver.username }}" 
+                                 class="rounded-circle" style="width: 50px; height: 50px;">
+                        {% endif %}
+                        <br>
+                        <span>{{ receiver.username }}</span>
+                    </div>
+                </div>
+                
+                
+                <div class="card-body" id="chatBox" style="height: 400px; overflow-y: scroll; background-color: #fafafa;">
+                    {% for message in messages %}
+                    <div class="d-flex mb-3 {% if message.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                        {% if message.sender != request.user %}
+                       
+                        <img src="{% if message.sender.avatar %}{{ message.sender.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover; margin-right: 10px;">
+                        {% endif %}
+                
+                        <div class="message-box {% if message.sender == request.user %}bg-secondary text-white{% else %}bg-secondary text-dark{% endif %} p-2 rounded" style="max-width: 40%; position: relative;">
+                            <p class="mb-1" style="font-size: 14px; text-align: justify;">{{ message.content }}</p>
+                            
+                            {% if message.image %}
+                            <div class="media-container">
+                                <img src="{{ message.image.url }}" alt="Image" class="img-fluid rounded mt-2" style="max-width: 100%; background-color: transparent;">
+                            </div>
+                            {% endif %}
+                            
+                            {% if message.video %}
+                            <div class="media-container">
+                                <video controls class="mt-2" style="max-width: 100%; background-color: transparent;">
+                                    <source src="{{ message.video.url }}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                            {% endif %}
+                            
+                            <small class="text-muted">{{ message.timestamp|date:"M d, Y h:i A" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="card-footer bg-white">
+                    <form onsubmit="sendMessage({{ chat.id }}); return false;" method="POST" enctype="multipart/form-data" class="d-flex">
+                        {% csrf_token %}
+                        <textarea id="messageInput" name="content" class="form-control mr-1" rows="1" placeholder="Type a message..." style="resize: none;"></textarea>
+                        <div class="file-input-wrapper d-flex align-items-center mr-2">
+                            <label for="photo-input" class="mb-0 mr-2   " style="max-width: 100%;" >
+                                <i class="fas fa-camera" style="font-size: 20px; cursor: pointer; color: gray;"></i>
+                            </label>
+                            <input id="photo-input" type="file" name="image" accept="image/*" style="display:none; max-width: 100%;" onchange="previewFile(this)">
+                            <label for="video-input" class="mb-0">
+                                <i class="fas fa-video" style="font-size: 20px; cursor: pointer; color: gray;"></i>
+                            </label>
+                            <input id="video-input" type="file" name="video" accept="video/*" style="display:none; max-width: 100%;"  onchange="previewFile(this)">
+                        </div>
+                        <button style="background-color: orangered;" type="submit" class="btn">Send</button>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for File Preview -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filePreviewModalLabel">File Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" id="modalContent">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewFile(input) {
+        const modalContent = document.getElementById('modalContent');
+        modalContent.innerHTML = ''; // Clear previous content
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const fileReader = new FileReader();
+
+            // Detect file type
+            if (file.type.startsWith('image/')) {
+                fileReader.onload = function (e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-fluid rounded';
+                    img.alt = 'Image Preview';
+                    modalContent.appendChild(img);
+                };
+                fileReader.readAsDataURL(file);
+            } else if (file.type.startsWith('video/')) {
+                fileReader.onload = function (e) {
+                    const video = document.createElement('video');
+                    video.src = e.target.result;
+                    video.controls = true;
+                    video.style.maxWidth = '100%';
+                    video.className = 'rounded';
+                    modalContent.appendChild(video);
+                };
+                fileReader.readAsDataURL(file);
+            } else {
+                alert('Invalid file type. Only images or videos are allowed.');
+                return;
+            }
+
+            // Show the modal
+            const filePreviewModal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+            filePreviewModal.show();
+        }
+    }
+
+    
+    function sendMessage(chatId) {
+        const messageInput = document.getElementById('messageInput');
+        const imageInput = document.getElementById('photo-input');
+        const videoInput = document.getElementById('video-input');
+        const chatBox = document.getElementById('chatBox');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('content', messageInput.value.trim());
+        if (imageInput.files.length > 0) {
+            formData.append('image', imageInput.files[0]);
+        }
+        if (videoInput.files.length > 0) {
+            formData.append('video', videoInput.files[0]);
+        }
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        fetch(`/chats/${chatId}/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Add new message to the chat box
+                    const newMessage = document.createElement('div');
+                    newMessage.className = 'd-flex mb-3 justify-content-end';
+                    newMessage.innerHTML = `
+                        <div class="message-box bg-dark text-white p-2 rounded" style="max-width: 40%; position: relative;">
+                            ${data.message.content ? `<p class="mb-1">${data.message.content}</p>` : ''}
+                            ${data.message.image ? `<img src="${data.message.image}" alt="Image" class="img-fluid rounded mt-2">` : ''}
+                            ${data.message.video ? `<video controls class="mt-2"><source src="${data.message.video}" type="video/mp4"></video>` : ''}
+                            <small class="text-muted">${data.message.timestamp}</small>
+                        </div>
+                    `;
+                    chatBox.appendChild(newMessage);
+
+                    // Reset form inputs
+                    messageInput.value = '';
+                    imageInput.value = '';
+                    videoInput.value = '';
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    alert(data.error || 'Failed to send the message');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An unexpected error occurred. Please try again.');
+            });
+    }
+
+
+</script>
+{% endblock %}

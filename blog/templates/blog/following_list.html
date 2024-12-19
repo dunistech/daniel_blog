@@ -1,0 +1,15 @@
+<!-- {% extends "blog/layout.html" %}
+{% block content %}
+<div class="container my-5">
+    <h1>{{ profile_user.username }} is Following</h1>
+    <ul class="list-group">
+        {% for follow in following %}
+            <li class="list-group-item">
+                <a href="{% url 'profile' follow.followed_user.username %}">{{ follow.followed_user.username }}</a>
+            </li>
+        {% empty %}
+            <p>{{ profile_user.username }} is not following anyone yet.</p>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %} -->

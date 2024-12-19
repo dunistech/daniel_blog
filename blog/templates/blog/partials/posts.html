@@ -1,0 +1,126 @@
+
+{% load static %}
+
+
+{% for post in page_obj %}
+        
+        <div class="post mb-2" style="border-bottom:1px solid #ddd;   padding-bottom: 10px;padding-right: 10px;">
+           
+           
+                <div class="post-header d-flex align-items-center mb-3">
+                    <a style="color: black; font-weight: 700;" href="{% url 'profile' post.user.username %}" class="d-flex align-items-center text-decoration-none">
+                        {% if post.user.avatar %}
+                            <img src="{{ post.user.avatar.url }}" 
+                                 alt="Avatar" 
+                                 class="rounded-circle me-3" 
+                                 style="width: 50px; height: 50px;">
+                        {% else %}
+                            <img src="{% static 'blog/images/placeholder.png' %}" 
+                                 alt="Avatar" 
+                                 class="rounded-circle me-3" 
+                                 style="width: 50px; height: 50px;">
+                        {% endif %}
+                        <div>
+                            <h6 class="m-0">{{ post.user.username }}</h6>
+                        </div>
+                    </a>
+                </div>
+       
+            
+
+           
+            <div class="post-content mb-3">
+                <a href="{%  url 'post_detail' post.slug %}" class="text-decoration-none text-dark">
+                    <h4 class="mb-3" style="font-weight: bold; margin-left: 67px;">{{ post.title }}</h4>
+                    <p style=" margin-left: 67px">{{ post.content|truncatewords:50 }}</p>
+                </a>
+            </div>
+
+            <!-- Media Gallery --> 
+            {% if post.media.all %}
+            <a href="{% url 'post_detail' post.slug %}" class="text-decoration-none text-dark">
+   
+            <div class="media-gallery-container position-relative" style="margin-left: 67px; ">
+                {% if post.media.count > 2 %}
+                <button class="scroll-btn btn btn-light position-absolute top-50 start-0 translate-middle-y" onclick="scrollMedia('left', {{ post.id }})">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                {% endif %}
+                <div id="media-gallery-{{ post.id }}" class="media-gallery" style="{% if post.media.count == 1 %}display: flex; align-items: center; justify-content: center; background:#ddd; {% else %}display: flex; overflow-x: auto; background: #ddd;{% endif %}" >
+                    {% for media in post.media.all %}
+                    <div class="media-item" >
+                        {% if media.file_type == 'image' %}
+                        <img src="{{ media.file.url }}" alt="Post Image">
+                        {% elif media.file_type == 'video' %}
+                        <video controls autoplay muted>
+                            <source src="{{ media.file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if post.media.count > 2 %}
+                <button class="scroll-btn btn btn-light position-absolute top-50 end-0 translate-middle-y" onclick="scrollMedia('right', {{ post.id }})">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                {% endif %}
+            </div>
+            </a>
+            <small  class="text-muted" style="margin-left: 67px;" >{{ post.created_at|date:"F j, Y, g:i a" }}</small>
+            
+            {% endif %}
+           
+            <div class="post-actions mt-3 d-flex justify-content-between">
+
+                <button  onclick="likedPost({{ post.id }})" id="likeButton-{{ post.id }}" class="btn  btn-sm" style="margin-left: 67px; border-color:orangered ;">
+                    {% if liked_by_user %}
+                        <i class="fas fa-heart"></i> Liked
+                    {% else %}
+                        <i class="far fa-heart"></i> Like
+                    {% endif %}
+                    <span id="likes-count-{{ post.id }}" class="text-muted">{{ post.like_set.count }}</span>
+                </button>
+                <button style="border-color:orangered ;" class="btn  btn-sm" data-bs-toggle="modal" data-bs-target="#commentModal-{{ post.id }}">
+                    <i class="far fa-comment"></i> {{ post.comment_count }} Comments
+                </button>
+            </div>
+        </div>
+   
+       
+        <div class="modal fade" id="commentModal-{{ post.id }}" tabindex="-1" aria-labelledby="commentModalLabel-{{ post.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="commentModalLabel-{{ post.id }}">Add a Comment</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form action="{% url 'add_comment' slug=post.slug %}" method="POST" enctype="multipart/form-data" id="comment-form-{{ post.id }}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <textarea name="content" class="form-control" rows="4" placeholder="Write your comment..." required></textarea>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label style="color: orangered;" for="photo-input-{{ post.id }}" class="upload-icon">
+                                    <i class="fas fa-camera"></i> Upload Image
+                                </label>
+                                <input id="photo-input-{{ post.id }}" type="file" name="images" accept="image/*" style="display:none;" onchange="previewImage(this, 'image-preview-{{ post.id }}')">
+                                <div id="image-preview-{{ post.id }}" style="margin-top: 10px;"></div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label style="color: orangered;"  for="video-input-{{ post.id }}" class="upload-icon">
+                                    <i class="fas fa-video"></i> Upload Video
+                                </label>
+                                <input id="video-input-{{ post.id }}" type="file" name="videos" accept="video/*" style="display:none;" onchange="previewVideo(this, 'video-preview-{{ post.id }}')">
+                                <div id="video-preview-{{ post.id }}" style="margin-top: 10px;"></div>
+                            </div>
+                            <button style="background-color: orangered;" type="submit" class="btn btn-primary mt-3">Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+         
+{% endfor %}
+    

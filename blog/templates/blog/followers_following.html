@@ -1,0 +1,120 @@
+{% extends "blog/layout.html" %}
+
+{% load static %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'story' %}">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'write_post' %}">
+                    <i class="fas fa-edit" style="font-size: 25px; color: rgb(119, 97, 97); margin-top: 8px;"></i> Write
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'chat_list' %}">
+                    <i class="fas fa-envelope" style="font-size: 25px; margin-top: 8px;"></i> Inbox
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{ sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="post-container">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="connectionsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="followers-tab" data-bs-toggle="tab" data-bs-target="#followers" type="button" role="tab" aria-controls="followers" aria-selected="true" style="color: #333;">
+                Followers ({{ followers.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="following-tab" data-bs-toggle="tab" data-bs-target="#following" type="button" role="tab" aria-controls="following" aria-selected="false" style="color: #333;">
+                Following ({{ following.count }})
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="connectionsTabContent">
+        <!-- Followers -->
+        <div class="tab-pane fade show active" id="followers" role="tabpanel" aria-labelledby="followers-tab">
+            <ul class="list-group my-3">
+                {% for follow in followers %}
+                    <li class="list-group-item" style="display: flex; justify-content: space-between;">
+                        <a style="color: #333;" href="{% url 'profile' follow.user.username %}">{{ follow.user.username }}</a>
+                        
+                        {% if request.user != follow.user %}
+                            {% if follow.user in user_following %}
+                                <button onclick="followerUser('{{ follow.user.username }}')" class="follow-btn">
+                                    Unfollow
+                                </button>
+                            {% else %}
+                                <button onclick="followerUser('{{ follow.user.username }}')" class="follow-btn">
+                                    Follow
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </li>
+                {% empty %}
+                    <p>{{ profile_user.username }} has no followers yet.</p>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <!-- Following -->
+        <div class="tab-pane fade" id="following" role="tabpanel" aria-labelledby="following-tab">
+            <ul class="list-group my-3">
+                {% for follow in following %}
+                    <li class="list-group-item" style="display: flex; justify-content: space-between;">
+                        <a style="color: #333;" href="{% url 'profile' follow.followed_user.username %}">{{ follow.followed_user.username }}</a>
+                        
+                        {% if request.user != follow.followed_user %}
+                            {% if follow.followed_user in user_following %}
+                                <button onclick="followerUser('{{ follow.followed_user.username }}')" class="follow-btn">
+                                    Unfollow
+                                </button>
+                            {% else %}
+                                <button onclick="followerUser('{{ follow.followed_user.username }}')" class="follow-btn">
+                                    Follow
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </li>
+                {% empty %}
+                    <p>{{ profile_user.username }} is not following anyone yet.</p>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <a class="page-link mt-3" style="color: #333; font-weight: bold;" href="{% url 'profile' profile_user.username %}">Back to Profile</a>
+</div>
+{% endblock %}

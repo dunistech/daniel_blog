@@ -1,0 +1,144 @@
+{% extends "blog/layout.html" %}
+{% load static %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'story' %}">
+            <img src="{% static 'blog/images/site-logo.png' %}" style="width: 80px; height: 80px;" alt="">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'chat_list' %}">
+                    <i class="fas fa-envelope" style="font-size: 25px; margin-top: 8px;  color: rgb(172, 163, 163);"></i> Inbox
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' user.username %}">
+                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="profile-image rounded-circle" style="width: 25px; height: 25px;">
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <div class="container write-post">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <h1 class="text-center mb-4">Write Post</h1>
+
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data" action="{% if is_editing %}{% url 'edit_post' slug=post.slug %}{% else %}{% url 'write_post' %}{% endif %}">
+    
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <input type="text" name="title" class="form-control post-title" value="{% if post %}{{ post.title }}{% else %}{{ '' }}{% endif %}" required>
+                    </div>
+                    <div class="form-group">
+                        <textarea name="content" class="form-control post-content" placeholder="Write your story..." rows="12" >{{ post.content }}</textarea>
+                    </div>
+                    
+                    {% if post.media.all %}
+                        <div class="form-group existing-media">
+                            <h5>Existing Media</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% for media in post.media.all %}
+                                    {% if media.file_type == 'image' %}
+                                        <img src="{{ media.file.url }}" alt="Existing Image" style="width: 100px; height: auto;">
+                                        <input type="checkbox" name="remove_images" value="{{ media.id }}"> Remove
+                                    {% elif media.file_type == 'video' %}
+                                        <video controls style="width: 100px; height: auto;">
+                                            <source src="{{ media.file.url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        <input type="checkbox" name="remove_videos" value="{{ media.id }}"> Remove
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                
+                 
+                    <div class="form-group media-controls">
+                        <div class="d-flex justify-content-start">
+                            <label for="images" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-image"></i> Add Images
+                            </label>
+                            <input type="file" name="images" id="images" class="d-none" accept="image/*" multiple>
+
+                            <label for="videos" class="btn btn-outline-secondary btn-sm ml-2">
+                                <i class="fas fa-video"></i> Add Videos
+                            </label>
+                            <input type="file" name="videos" id="videos" class="d-none" accept="video/*" multiple>
+                        </div>
+                    </div>
+                    <div id="media-preview" class="media-preview" style="display: flex; gap: 15px; flex-wrap: wrap;"></div>
+
+                 
+                    <div class="d-flex justify-content-end">
+                        <button style="background-color: orangered;" type="submit" class="btn">{% if is_editing %}Update Post{% else %}Publish{% endif %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('images').addEventListener('change', function(event) {
+            const previewContainer = document.getElementById('media-preview');
+
+            // Append new images without clearing the previous content
+            for (const file of event.target.files) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = '100px';
+                img.style.marginRight = '10px';
+                previewContainer.appendChild(img);
+            }
+        });
+
+        document.getElementById('videos').addEventListener('change', function(event) {
+            const previewContainer = document.getElementById('media-preview');
+
+            // Append new videos without clearing the previous content
+            for (const file of event.target.files) {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.style.width = '100px';
+                video.controls = true;
+                previewContainer.appendChild(video);
+            }
+        });
+    </script>
+
+{% endblock %}

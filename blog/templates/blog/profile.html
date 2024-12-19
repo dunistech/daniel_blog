@@ -1,0 +1,545 @@
+{% extends "blog/layout.html" %}
+{% load static %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'story' %}">
+            <img src="{% static 'blog/images/site-logo.png' %}" style="width: 80px; height: 80px;" alt="">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'write_post' %}">
+                    <i class="fas fa-edit" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i> Write
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'chat_list' %}">
+                    <i class="fas fa-envelope" style="font-size: 25px; margin-top: 8px; color: rgb(172, 163, 163);"></i> Inbox
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{ sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+            
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+        <div class="post-container">
+            <!-- Profile Header -->
+            <div class="text-center py-4 border-bottom">
+                {% if profile_user.avatar %}
+                    <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.username }}" class="rounded-circle mb-2" style="width: 100px; height: 100px;">
+                {% else %}
+                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="profile-image rounded-circle" style="width: 100px; height: 100px;">
+                {% endif %}
+                
+                <h1 class="h3">{{ profile_user.username }}</h1>
+                <p class="text-muted">{{ profile_user.descr }}</p>
+                <p class="text-muted">{{ profile_user.location }}</p>
+
+                <!-- Follow/Unfollow and Chat -->
+                <div class="d-flex justify-content-center gap-3">
+                    {% if request.user != profile_user %}
+                    {% if following %}
+                        <button onclick="followerUser('{{  profile_user.username }}')" class="follow-btn">Unfollow</button>
+                    {% else %}
+                        <button onclick="followerUser('{{  profile_user.username }}')" class="follow-btn">Follow</button>
+                    {% endif %}
+                        <a href="{% url 'chat_detail' chat.id %}" class="btn btn-outline-dark">Chat</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Follower and Following Count -->
+            <div class="text-center mt-3">
+                <p>
+                    <a   class="text-dark" style="text-decoration: none;" href="{% url 'followers_following_list' profile_user.username %}">
+                       <span> {{ profile_user.followers.count }} Followers</span> |  <span> {{ profile_user.following.count }}  Following</span> 
+                    </a>
+                </p>
+
+            </div>
+
+            <!-- Edit Profile -->
+            {% if request.user == profile_user %}
+                <div class="text-center mt-4">
+                    <a style="border-color: orangered;" href="#editProfileModal" class="btn " data-bs-toggle="modal">Edit Profile</a>
+                </div>
+            {% endif %}
+
+            
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mt-4 " >
+                <li class="nav-item" >
+                    <a style="color: orangered;" class="nav-link active" href="#posts" data-bs-toggle="tab" id="posts-tab" data-bs-target="#posts">Posts</a>
+                </li>
+                <li class="nav-item"  >
+                    <a  style="color: orangered;" class="nav-link" href="#likes" data-bs-toggle="tab" id="likes-tab" data-bs-target="#likes">Likes</a>
+                </li>
+                <li class="nav-item">
+                    <a style="color: orangered;" class="nav-link" href="#replies" data-bs-toggle="tab" id="replies-tab" data-bs-target="#replies">Replies</a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mt-3">
+               
+                <div id="posts" class="tab-pane fade show active">
+                    {% for post in page_obj %}
+                        <div class="post mb-2" style="border-bottom:1px solid #ddd; background: #fff; padding-bottom: 10px;">
+                          
+                            <div class="post-header d-flex align-items-center mb-3">
+                                <a style="color: black; font-weight: 700;" href="{% url 'profile' post.user.username %}" class="d-flex align-items-center text-decoration-none">
+                                    {% if post.user.avatar %}
+                                        <img src="{{ post.user.avatar.url }}" 
+                                             alt="Avatar" 
+                                             class="rounded-circle me-3" 
+                                             style="width: 50px; height: 50px;">
+                                    {% else %}
+                                        <img src="{% static 'blog/images/placeholder.png' %}" 
+                                             alt="Avatar" 
+                                             class="rounded-circle me-3" 
+                                             style="width: 50px; height: 50px;">
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="m-0">{{ post.user.username }}</h6>
+                                    </div>
+                                </a>
+                            </div>
+
+                            <div class="post-content mb-3">
+                                <a href="{% url 'post_detail' post.slug %}" class="text-decoration-none text-dark">
+                                    <h4 class="mb-3" style="font-weight: bold; margin-left: 67px;">{{ post.title }}</h4>
+                                    <p style=" margin-left: 67px">{{ post.content|truncatewords:50 }}</p>
+                                </a>
+                            </div>
+                            
+                            {% if post.media.all %}
+                                <a href="{% url 'post_detail' post.slug %}">
+                                <div class="media-gallery-container position-relative" style="margin-left: 67px;">
+                                    {% if post.media.count > 2 %}
+                                    <button class="scroll-btn btn btn-light position-absolute top-50 start-0 translate-middle-y" onclick="scrollMedia('left', {{ post.id }})">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    {% endif %}
+                                    <div id="media-gallery-{{ post.id }}" class="media-gallery" style="{% if post.media.count == 1 %}display: flex; align-items: center; justify-content: center;{% else %}display: flex; overflow-x: auto;{% endif %}">
+                                        {% for media in post.media.all %}
+                                        <div class="media-item">
+                                            {% if media.file_type == 'image' %}
+                                            <img src="{{ media.file.url }}" alt="Post Image">
+                                            {% elif media.file_type == 'video' %}
+                                            <video controls autoplay muted>
+                                                <source src="{{ media.file.url }}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if post.media.count > 2 %}
+                                    <button class="scroll-btn btn btn-light position-absolute top-50 end-0 translate-middle-y" onclick="scrollMedia('right', {{ post.id }})">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                </a>
+                                <small class="text-muted" style="margin-left: 67px;">{{ post.created_at|date:"F j, Y, g:i a" }}</small>
+                            {% endif %}
+
+                                <div class="post-actions mt-3 d-flex justify-content-between">
+                                    <button onclick="likedPost({{ post.id }})" id="likeButton-{{ post.id }}" class="btn btn-sm" style="margin-left: 67px; border-color:orangered ;">
+                                        {% if liked_by_user %}
+                                            <i class="fas fa-heart"></i> Liked
+                                        {% else %}
+                                            <i class="far fa-heart"></i> Like
+                                        {% endif %}
+                                        <span id="likes-count-{{ post.id }}" class="text-muted">{{ post.like_set.count }}</span>
+                                    </button>
+                                    <a href="{% url 'post_detail' post.slug %}">
+                                    <button style="border-color:orangered ;" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#commentModal-{{ post.id }}">
+                                        <i class="far fa-comment"></i> {{ post.comment_count }} Comments
+                                    </button>
+                                    </a>
+                                </div> 
+                        </div>
+                                
+                    {% empty %}
+                        <p class="text-center">No posts yet.</p>
+                    {% endfor %}
+
+                <!-- Pagination -->
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&tab=posts">Previous</a>
+                        </li>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&tab=posts">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Likes Tab -->
+            <div id="likes" class="tab-pane fade">
+                {% for post in liked_posts_page_obj %}
+                    <div class="post mb-2" style="border-bottom:1px solid #ddd; background: #fff; padding-bottom: 10px;">
+                        <div class="post-header d-flex align-items-center mb-3">
+                            <a style="color: black; font-weight: 700;" href="{% url 'profile' post.user.username %}" class="d-flex align-items-center text-decoration-none">
+                                {% if post.user.avatar %}
+                                    <img src="{{ post.user.avatar.url }}" 
+                                         alt="Avatar" 
+                                         class="rounded-circle me-3" 
+                                         style="width: 50px; height: 50px;">
+                                {% else %}
+                                    <img src="{% static 'blog/images/placeholder.png' %}" 
+                                         alt="Avatar" 
+                                         class="rounded-circle me-3" 
+                                         style="width: 50px; height: 50px;">
+                                {% endif %}
+                                <div>
+                                    <h6 class="m-0">{{ post.user.username }}</h6>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="post-content mb-3">
+                            <a href="{% url 'post_detail' post.slug %}" class="text-decoration-none text-dark">
+                                <h4 class="mb-3" style="font-weight: bold; margin-left: 67px;">{{ post.title }}</h4>
+                                <p style=" margin-left: 67px">{{ post.content|truncatewords:50 }}</p>
+                            </a>
+                        </div>
+                        {% if post.media.all %}
+                        <div class="media-gallery-container position-relative" style="margin-left: 67px;">
+                            {% if post.media.count > 2 %}
+                            <button class="scroll-btn btn btn-light position-absolute top-50 start-0 translate-middle-y" onclick="scrollMedia('left', {{ post.id }})">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            {% endif %}
+                            <div id="media-gallery-{{ post.id }}" class="media-gallery" style="{% if post.media.count == 1 %}display: flex; align-items: center; justify-content: center;{% else %}display: flex; overflow-x: auto;{% endif %}">
+                                {% for media in post.media.all %}
+                                <div class="media-item">
+                                    {% if media.file_type == 'image' %}
+                                    <img src="{{ media.file.url }}" alt="Post Image">
+                                    {% elif media.file_type == 'video' %}
+                                    <video controls autoplay muted>
+                                        <source src="{{ media.file.url }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if post.media.count > 2 %}
+                            <button class="scroll-btn btn btn-light position-absolute top-50 end-0 translate-middle-y" onclick="scrollMedia('right', {{ post.id }})">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted" style="margin-left: 67px;">{{ post.created_at|date:"F j, Y, g:i a" }}</small>
+                        {% endif %}
+                        <div class="post-actions mt-3 d-flex justify-content-between">
+                            <button onclick="likedPost({{ post.id }})" id="likeButton-{{ post.id }}" class="btn btn-sm" style="margin-left: 67px; border-color:orangered ;">
+                                {% if liked_by_user %}
+                                    <i class="fas fa-heart"></i> Liked
+                                {% else %}
+                                    <i class="far fa-heart"></i> Like
+                                {% endif %}
+                                <span id="likes-count-{{ post.id }}" class="text-muted">{{ post.like_set.count }}</span>
+                            </button>
+                            
+                            <a href="{% url 'post_detail' post.slug %}">
+                                <button style="border-color:orangered ;" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#commentModal-{{ post.id }}">
+                                    <i class="far fa-comment"></i> {{ post.comment_count }} Comments
+                                </button>
+                            </a>
+                        </div> 
+                    
+                    </div>
+                {% empty %}
+                    <p>No liked posts yet.</p>
+                {% endfor %}
+            
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if liked_posts_page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?likes_page={{ liked_posts_page_obj.previous_page_number }}&tab=likes">Previous</a></li>
+                        {% endif %}
+                        {% if liked_posts_page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?likes_page={{ liked_posts_page_obj.next_page_number }}&tab=likes">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Replies Tab -->
+            <div id="replies" class="tab-pane fade">
+                {% for post in replies_page_obj %}
+                    <div class="reply-post mb-2" style="border-bottom:1px solid #ddd; background: #fff; padding-bottom: 10px;">
+                        <div class="post mb-2">
+                            <div class="post-header d-flex align-items-center mb-3">
+                                <a style="color: black; font-weight: 700;" href="{% url 'profile' post.user.username %}" class="d-flex align-items-center text-decoration-none">
+                                    {% if post.user.avatar %}
+                                        <img src="{{ post.user.avatar.url }}" 
+                                             alt="Avatar" 
+                                             class="rounded-circle me-3" 
+                                             style="width: 50px; height: 50px;">
+                                    {% else %}
+                                        <img src="{% static 'blog/images/placeholder.png' %}" 
+                                             alt="Avatar" 
+                                             class="rounded-circle me-3" 
+                                             style="width: 50px; height: 50px;">
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="m-0">{{ post.user.username }}</h6>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="post-content mb-3">
+                                <a href="{% url 'post_detail' post.slug %}" class="text-decoration-none text-dark">
+                                    <h4 class="mb-3" style="font-weight: bold; margin-left: 67px;">{{ post.title }}</h4>
+                                    <p style=" margin-left: 67px">{{ post.content|truncatewords:50 }}</p>
+                                </a>
+                            </div>
+                            {% if post.media.all %}
+                            <div class="media-gallery-container position-relative" style="margin-left: 67px;">
+                                {% if post.media.count > 2 %}
+                                <button class="scroll-btn btn btn-light position-absolute top-50 start-0 translate-middle-y" onclick="scrollMedia('left', {{ post.id }})">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                {% endif %}
+                                <div id="media-gallery-{{ post.id }}" class="media-gallery" style="{% if post.media.count == 1 %}display: flex; align-items: center; justify-content: center;{% else %}display: flex; overflow-x: auto;{% endif %}">
+                                    {% for media in post.media.all %}
+                                    <div class="media-item">
+                                        {% if media.file_type == 'image' %}
+                                        <img src="{{ media.file.url }}" alt="Post Image">
+                                        {% elif media.file_type == 'video' %}
+                                        <video controls autoplay muted>
+                                            <source src="{{ media.file.url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if post.media.count > 2 %}
+                                <button class="scroll-btn btn btn-light position-absolute top-50 end-0 translate-middle-y" onclick="scrollMedia('right', {{ post.id }})">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted" style="margin-left: 67px;">{{ post.created_at|date:"F j, Y, g:i a" }}</small>
+                            {% endif %}
+                            <div class="post-actions mt-3 d-flex justify-content-between">
+                                <button onclick="likedPost({{ post.id }})" id="likeButton-{{ post.id }}" class="btn btn-sm" style="margin-left: 67px; border-color:orangered ;">
+                                    {% if liked_by_user %}
+                                        <i class="fas fa-heart"></i> Liked
+                                    {% else %}
+                                        <i class="far fa-heart"></i> Like
+                                    {% endif %}
+                                    <span id="likes-count-{{ post.id }}" class="text-muted">{{ post.like_set.count }}</span>
+                                </button>
+                                
+                                <a href="{% url 'post_detail' post.slug %}">
+                                    <button style="border-color:orangered ;" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#commentModal-{{ post.id }}">
+                                        <i class="far fa-comment"></i> {{ post.comment_count }} Comments
+                                    </button>
+                                </a>
+                            </div> 
+
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>No posts you've replied to yet.</p>
+                {% endfor %}
+            
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if replies_page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?replies_page={{ replies_page_obj.previous_page_number }}&tab=replies">Previous</a></li>
+                        {% endif %}
+                        {% if replies_page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?replies_page={{ replies_page_obj.next_page_number }}&tab=likes">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            
+
+            <!-- Media Tab -->
+            <div id="media" class="tab-pane fade">
+                {% for media in media_page_obj %}
+                    <div class="media-item mb-2">
+                        <div class="post mb-2">
+                            <div class="post-header d-flex align-items-center mb-3">
+                                <a style="color: black; font-weight: 700;" href="{% url 'profile' media.post.user.username %}" class="d-flex align-items-center text-decoration-none">
+                                    <img src="{{ media.post.user.avatar.url }}" alt="Avatar" class="rounded-circle me-3" style="width: 50px; height: 50px;">
+                                    <div>
+                                        <h6 class="m-0">{{ media.post.user.username }}</h6>
+                                    </div>
+                                </a>
+                            </div>
+                            {% if media.post %}
+                                <div class="post-content mb-3">
+                                    <a href="" class="text-decoration-none text-dark">
+                                        <h4 class="mb-3" style="font-weight: bold; margin-left: 67px;">{{ post.title }}</h4>
+                                        <p style=" margin-left: 67px">{{ post.content|truncatewords:50 }}</p>
+                                    </a>
+                                </div>
+                            {% elif media.comment %}
+                                <div class="comment-info mb-2">
+                                    <h5>Reply:</h5>
+                                    <p>{{ media.comment.content }}</p>
+                                </div>
+                            {% endif %}
+
+                            <div class="media-gallery-container position-relative" style="margin-left: 67px;">
+                                {% if post.media.count > 2 %}
+                                <button class="scroll-btn btn btn-light position-absolute top-50 start-0 translate-middle-y" onclick="scrollMedia('left', {{ post.id }})">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                {% endif %}
+                                <div id="media-gallery-{{ post.id }}" class="media-gallery" style="{% if post.media.count == 1 %}display: flex; align-items: center; justify-content: center;{% else %}display: flex; overflow-x: auto;{% endif %}">
+                                   
+                                    <div class="media-item">
+                                        {% if media.file_type == 'image' %}
+                                            <img src="{{ media.file.url }}" alt="Post Image">
+                                        {% elif media.file_type == 'video' %}
+                                            <video controls autoplay muted>
+                                                <source src="{{ media.file.url }}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if post.media.count > 2 %}
+                                <button class="scroll-btn btn btn-light position-absolute top-50 end-0 translate-middle-y" onclick="scrollMedia('right', {{ post.id }})">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted" style="margin-left: 67px;">{{ post.created_at|date:"F j, Y, g:i a" }}</small>
+                          
+
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>No media items yet.</p>
+                {% endfor %}
+            
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if media_page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?media_page={{ media_page_obj.previous_page_number }}">Previous</a></li>
+                        {% endif %}
+                        {% if media_page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?media_page={{ media_page_obj.next_page_number }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            
+            
+        </div>
+
+
+        <!-- Edit Profile Modal -->
+        <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <input id="photo-input" type="file" name="avatar" accept="image/*" style="display:none;" onchange="previewImage(this, 'image-preview')">
+                                <label  style="background-color: orangered;" for="photo-input" class="btn  mt-2"><i class="fas fa-camera"></i> profile image</label>
+                                <div id="image-preview" style="margin-top: 10px;"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="descr" class="form-label">Bio</label>
+                                <textarea name="descr" id="descr" rows="3" class="form-control">{{ profile_user.descr }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" name="location" id="location" class="form-control" value="{{ profile_user.location }}">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button style="background-color: orangered;" type="submit" class="btn">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    <script>
+            function previewImage(input, previewId) {
+                const previewDiv = document.getElementById(previewId);
+                previewDiv.innerHTML = ""; // Clear any previous preview
+
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        const img = document.createElement("img");
+                        img.src = e.target.result;
+                        img.alt = "Preview";
+                        img.className = "rounded-circle";
+                        img.style.width = "100px";
+                        img.style.height = "100px";
+                        previewDiv.appendChild(img);
+                    };
+
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+
+                function scrollMedia(direction, postId) {
+                    const gallery = document.getElementById(`media-gallery-${postId}`);
+                    const scrollAmount = 250; // Adjust scroll distance
+                    if (direction === 'left') {
+                        gallery.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    } else {
+                        gallery.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    }
+                }
+
+
+    </script>
+        
+{% endblock %}

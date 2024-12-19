@@ -1,0 +1,193 @@
+{% extends "blog/layout.html" %}
+{% load static %}
+
+{% block navbar %}
+<nav class="navbar navbar-expand-lg" style="background: white;">
+    <div class="container-fluid" style="border-bottom: 3px solid #ddd">
+        
+        <a style="font-size: 40px;" class="navbar-brand text-dark" href="{% url 'index' %}">
+            <img src="{% static 'blog/images/site-logo.png' %}" style="width: 80px; height: 80px;" alt="">
+            Dunis<span style="color: orangered;">Blog</span>
+        </a>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'write_post' %}">
+                    <i class="fas fa-edit" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i> Write
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" href="{% url 'chat_list' %}">
+                    <i class="fas fa-envelope" style="font-size: 25px; margin-top: 8px; color: rgb(172, 163, 163);"></i> Inbox
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell" style="font-size: 25px; color: rgb(172, 163, 163); margin-top: 8px;"></i>
+                    {% if unread_notifications.count > 0 %}
+                        <span id="notification-count" class="badge bg-danger" style="display: none;"></span>
+
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% for notification in notifications %}
+                        <li class="notification-item" data-notification-id="{{ notification.id }}">
+                            <a class="dropdown-item" href="{{ notification.url }}">
+                                <strong>{{ sender.username }}</strong> {{ notification.content }}
+                                <br>
+                                <small>{{ notification.timestamp|date:"F j, Y, g:i a" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li><a class="dropdown-item">No new notifications</a></li>
+                    {% endfor %}
+                </ul>
+                
+            </li>
+            
+            
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' user.username %}" >
+                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'blog/images/placeholder.png' %}{% endif %}" alt="Profile" class="profile-image rounded-circle" style="width: 35px; height: 35px;">
+
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-5" style="font-weight: bold; font-size: 24px;">What People Are Saying Around The World</h2>
+<div id="post-container" class="post-container">
+    {% include 'blog/partials/posts.html' %}
+
+    
+</div>
+<div id="loading-message" style="display: none; text-align: center;">
+    <img src="{% static 'blog/images/loading.gif' %}" alt="Loading..." style="width: 50px;">
+    <p>Loading more posts...</p>
+</div>
+<script>
+       
+        let loading = false;
+        let page = 2; // Start from page 2 since page 1 is already loaded
+
+        window.addEventListener("scroll", function () {
+            if (!loading && window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+                loading = true;
+                console.log("Fetching page:", page); // Log the page number
+                loadMorePosts();
+            }
+        });
+
+        function loadMorePosts() {
+            $.ajax({
+                url: "/story/",
+                data: { page: page },
+                beforeSend: function () {
+                    console.log("Loading posts...");
+                    $("#loading-message").show();
+                },
+                success: function (response) {
+                    console.log("Response:", response.html); // Log the response
+                    if (response.html.trim()) {
+                        $("#post-container").append(response.html); // Append new posts
+                        page++; // Increment the page number
+                        console.log("Page incremented to:", page);
+                        loading = false; // Allow further requests
+                    } else {
+                        $("#loading-message").html("<p>No more posts to load.</p>");
+                        loading = true; // Prevent further requests
+                    }
+                },
+                error: function () {
+                    console.error("Failed to load posts.");
+                    loading = false; // Reset loading flag
+                },
+                complete: function () {
+                    $("#loading-message").hide();
+                }
+            });
+        }
+
+        //media preview
+
+        function previewImage(input, previewContainerId) {
+            const previewContainer = document.getElementById(previewContainerId);
+
+            previewContainer.innerHTML = ''; // Clear previous previews
+
+            if (input.files) {
+                for (let i = 0; i < input.files.length; i++) {
+                    const file = input.files[i];
+                    const fileReader = new FileReader();
+
+                    if (file.type.startsWith('image/')) {
+                        fileReader.onload = function (e) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.width = '150px';  // Set fixed preview width
+                            img.style.height = '150px'; // Set fixed preview height
+                            img.style.objectFit = 'cover'; // Ensure the image fits the box properly
+                            img.classList.add('img-thumbnail'); // Bootstrap styling
+                            previewContainer.appendChild(img);
+                        };
+                        fileReader.readAsDataURL(file);
+                    } else {
+                        previewContainer.innerHTML = `<p style="color: red;">Please select a valid image file.</p>`;
+                        input.value = ''; // Reset input if invalid file is selected
+                    }
+                }
+            }
+        }
+
+        function previewVideo(input, previewContainerId) {
+            const previewContainer = document.getElementById(previewContainerId);
+
+            previewContainer.innerHTML = ''; // Clear previous previews
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const fileReader = new FileReader();
+
+                if (file.type.startsWith('video/')) {
+                    fileReader.onload = function (e) {
+                        const video = document.createElement('video');
+                        video.src = e.target.result;
+                        video.style.width = '150px';  // Set fixed preview width
+                        video.style.height = '150px'; // Set fixed preview height
+                        video.controls = true; // Enable playback controls
+                        video.autoplay = true; // Enable autoplay
+                        video.muted = true; // Mute the video for autoplay to work in most browsers
+                        video.classList.add('video-thumbnail'); // Add class for styling
+                        previewContainer.appendChild(video);
+                    };
+                    fileReader.readAsDataURL(file);
+                } else {
+                    previewContainer.innerHTML = `<p style="color: red;">Please select a valid video file.</p>`;
+                    input.value = ''; // Reset the input
+                }
+            }
+        }
+
+
+
+        function scrollMedia(direction, postId) {
+            const gallery = document.getElementById(`media-gallery-${postId}`);
+            const scrollAmount = 250; // Adjust scroll distance
+            if (direction === 'left') {
+                gallery.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            } else {
+                gallery.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            }
+        }
+
+
+    
+
+</script>
+
+
+
+
+{% endblock %}
